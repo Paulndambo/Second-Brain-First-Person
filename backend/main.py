@@ -110,6 +110,11 @@ def process_audio(base64_audio: str) -> tuple[bytes, str]:
         raise HTTPException(status_code=400, detail=f"Audio processing failed: {str(e)}")
 
 
+@app.get("/")
+async def root():
+    return { "message": "Server is running and you just found yourself at Second Brain, First Person" }
+
+
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(request: AnalyzeRequest):
     """

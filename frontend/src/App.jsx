@@ -20,18 +20,46 @@ function App() {
   // Initialize camera
   const initCamera = async () => {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Camera access is not supported in this browser.')
+        return
+      }
+
+      if (!window.isSecureContext) {
+        setError('Camera access requires HTTPS or localhost.')
+        return
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720 },
+        video: {
+          width: 1280,
+          height: 720,
+          facingMode: { ideal: 'environment' }
+        },
         audio: true
       })
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         streamRef.current = stream
+        try {
+          await videoRef.current.play()
+        } catch (playErr) {
+          console.warn('Video play error:', playErr)
+        }
         setCameraReady(true)
       }
     } catch (err) {
-      setError('Camera/microphone access denied. Please allow permissions.')
+      const name = err?.name || 'Error'
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setError('Camera/microphone access denied. Please allow permissions.')
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        setError('No camera/microphone found.')
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        setError('Camera/microphone is in use by another app.')
+      } else {
+        setError(`Camera/microphone error: ${err?.message || name}`)
+      }
       console.error('Media access error:', err)
     }
   }
@@ -171,7 +199,7 @@ function App() {
       setStatus('thinking')
 
       // Call backend
-      const response = await fetch('http://localhost:8000/analyze', {
+      const response = await fetch('https://f32f2cc0a5df.ngrok-free.app/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
